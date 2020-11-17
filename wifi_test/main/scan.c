@@ -17,10 +17,10 @@
 #include "esp_log.h"
 #include "esp_event.h"
 #include "nvs_flash.h"
+#include "driver/uart.h"
 
 #define MAX_AP_NUM 10
-
-static const char *TAG = "scan";
+#define BUF_SIZE (1024)
 
 void setup_wifi(void)
 {
@@ -31,6 +31,29 @@ void setup_wifi(void)
 	esp_wifi_set_mode(WIFI_MODE_STA);
 
 	esp_wifi_start();
+}
+
+void setup_uart(void)
+{
+    /* Configure parameters of an UART driver,
+     * communication pins and install the driver */
+
+	uart_config_t uart_config = {
+        .baud_rate = 115200,
+        .data_bits = UART_DATA_8_BITS,
+        .parity    = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_APB,
+    };
+
+    uart_param_config(UART_NUM_0, &uart_config);
+
+    uart_set_pin(UART_NUM_0, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+
+    QueueHandle_t uart_queue;
+
+    uart_driver_install(UART_NUM_0, BUF_SIZE * 2, BUF_SIZE * 2, 10, &uart_queue, 0);
 }
 
 void wifi_scan(uint16_t *num, wifi_ap_record_t *records)
@@ -55,6 +78,8 @@ void app_main(void)
 
     setup_wifi();
 
+    setup_uart();
+
     uint16_t num;
     wifi_ap_record_t accesspoints[MAX_AP_NUM];
 
@@ -69,14 +94,23 @@ void app_main(void)
     		printf(" %d : %s\n", (i+1), accesspoints[i].ssid);
     	}
 
-    	int idx;
-    	printf(" Which one would you like to connect to?");
+    	int idx = -1;
 
+    	char* input = (char*)malloc(10);
 
+    	uart_read_bytes(UART_NUM_0, input, 10, 1000 / portTICK_PERIOD_MS);
 
-    	printf(idx);
+    	idx = atoi(input);
 
-    	vTaskDelay(10000 / portTICK_PERIOD_MS);
+    	if(idx < 1 || idx > num)
+    	{
+    		printf("No input received. Refreshing list...\n\n");
+    		continue;
+    	}
+
+    	printf(" %d : %s \n\n", idx, accesspoints[idx-1].ssid);
+
+    	vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 
     esp_restart();
