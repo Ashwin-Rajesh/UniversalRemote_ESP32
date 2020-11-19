@@ -13,6 +13,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
+#include "esp_log.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "driver/gpio.h"
@@ -25,165 +26,81 @@
    Return an error if anything goes wrong
    during this process.
  */
-esp_err_t save_restart_counter(void)
+
+// Setup GPIO
+void setup_gpio(void)
 {
-    nvs_handle_t my_handle;
-    esp_err_t err;
+	gpio_config_t gpio_struct = {
+		.intr_type  = GPIO_INTR_DISABLE,
+		.mode		= GPIO_MODE_INPUT,
+		.pin_bit_mask 	= 1ULL << 0,
+		.pull_down_en 	= GPIO_PULLDOWN_ENABLE,
+		.pull_up_en 	= GPIO_PULLUP_ENABLE
+	};
 
-    // Open
-    err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &my_handle);
-    if (err != ESP_OK) return err;
-
-    // Read
-    int32_t restart_counter = 0; // value will default to 0, if not set yet in NVS
-    err = nvs_get_i32(my_handle, "restart_conter", &restart_counter);
-    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) return err;
-
-    // Write
-    restart_counter++;
-    err = nvs_set_i32(my_handle, "restart_conter", restart_counter);
-    if (err != ESP_OK) return err;
-
-    // Commit written value.
-    // After setting any values, nvs_commit() must be called to ensure changes are written
-    // to flash storage. Implementations may write to storage at other times,
-    // but this is not guaranteed.
-    err = nvs_commit(my_handle);
-    if (err != ESP_OK) return err;
-
-    // Close
-    nvs_close(my_handle);
-    return ESP_OK;
+	gpio_config(&gpio_struct);
 }
 
-/* Save new run time value in NVS
-   by first reading a table of previously saved values
-   and then adding the new value at the end of the table.
-   Return an error if anything goes wrong
-   during this process.
- */
-esp_err_t save_run_time(void)
+// Setup non-volatile storage
+void setup_nvs()
 {
-    nvs_handle_t my_handle;
-    esp_err_t err;
+	esp_err_t err = nvs_flash_init();
 
-    // Open
-    err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &my_handle);
-    if (err != ESP_OK) return err;
+	if(err != ESP_OK)
+	{
+		ESP_LOGW("nvs_test", " Somethings wrong. Clearing flash and resetting...");
+		ESP_ERROR_CHECK(nvs_flash_erase());
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-    // Read the size of memory space required for blob
-    size_t required_size = 0;  // value will default to 0, if not set yet in NVS
-    err = nvs_get_blob(my_handle, "run_time", NULL, &required_size);
-    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) return err;
+		esp_restart();
+	}
 
-    // Read previously saved blob if available
-    uint32_t* run_time = malloc(required_size + sizeof(uint32_t));
-    if (required_size > 0) {
-        err = nvs_get_blob(my_handle, "run_time", run_time, &required_size);
-        if (err != ESP_OK) {
-            free(run_time);
-            return err;
-        }
-    }
 
-    // Write value including previously saved blob if available
-    required_size += sizeof(uint32_t);
-    run_time[required_size / sizeof(uint32_t) - 1] = xTaskGetTickCount() * portTICK_PERIOD_MS;
-    err = nvs_set_blob(my_handle, "run_time", run_time, required_size);
-    free(run_time);
-
-    if (err != ESP_OK) return err;
-
-    // Commit
-    err = nvs_commit(my_handle);
-    if (err != ESP_OK) return err;
-
-    // Close
-    nvs_close(my_handle);
-    return ESP_OK;
 }
 
-/* Read from NVS and print restart counter
-   and the table with run times.
-   Return an error if anything goes wrong
-   during this process.
- */
-esp_err_t print_what_saved(void)
+// Increments value called "count" in memory
+void inc_count()
 {
-    nvs_handle_t my_handle;
-    esp_err_t err;
+	nvs_handle_t nvs_obj;
 
-    // Open
-    err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &my_handle);
-    if (err != ESP_OK) return err;
+	nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &nvs_obj);
 
-    // Read restart counter
-    int32_t restart_counter = 0; // value will default to 0, if not set yet in NVS
-    err = nvs_get_i32(my_handle, "restart_conter", &restart_counter);
-    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) return err;
-    printf("Restart counter = %d\n", restart_counter);
+	int16_t value = 0;
+	nvs_get_i16(nvs_obj, "count", &value);
 
-    // Read run time blob
-    size_t required_size = 0;  // value will default to 0, if not set yet in NVS
-    // obtain required memory space to store blob being read from NVS
-    err = nvs_get_blob(my_handle, "run_time", NULL, &required_size);
-    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) return err;
-    printf("Run time:\n");
-    if (required_size == 0) {
-        printf("Nothing saved yet!\n");
-    } else {
-        uint32_t* run_time = malloc(required_size);
-        err = nvs_get_blob(my_handle, "run_time", run_time, &required_size);
-        if (err != ESP_OK) {
-            free(run_time);
-            return err;
-        }
-        for (int i = 0; i < required_size / sizeof(uint32_t); i++) {
-            printf("%d: %d\n", i + 1, run_time[i]);
-        }
-        free(run_time);
-    }
+	value++;
 
-    // Close
-    nvs_close(my_handle);
-    return ESP_OK;
+	nvs_set_i16(nvs_obj, "count", value);
+
+	nvs_commit(nvs_obj);
+
+	ESP_LOGI("nvs_test", " Incremented value : %d", value);
+
+	nvs_close(nvs_obj);
 }
 
+// Task to check button (GPIO0) and if pressed, call increment function
+void inc_task(void *param)
+{
+	while(true)
+	{
+		if(!gpio_get_level(GPIO_NUM_0))
+			inc_count();
+
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+	}
+}
 
 void app_main(void)
 {
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        // NVS partition was truncated and needs to be erased
-        // Retry nvs_flash_init
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK( err );
 
-    err = print_what_saved();
-    if (err != ESP_OK) printf("Error (%s) reading data from NVS!\n", esp_err_to_name(err));
+	setup_nvs();
+	ESP_LOGI("nvs_test", "Setup NVS");
 
-    err = save_restart_counter();
-    if (err != ESP_OK) printf("Error (%s) saving restart counter to NVS!\n", esp_err_to_name(err));
+	setup_gpio();
+	ESP_LOGI("nvs_test", "Setup GPIO");
 
-    gpio_reset_pin(GPIO_NUM_0);
-    gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
 
-    /* Read the status of GPIO0. If GPIO0 is LOW for longer than 1000 ms,
-       then save module's run time and restart it
-     */
-    while (1) {
-        if (gpio_get_level(GPIO_NUM_0) == 0) {
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-            if(gpio_get_level(GPIO_NUM_0) == 0) {
-                err = save_run_time();
-                if (err != ESP_OK) printf("Error (%s) saving run time blob to NVS!\n", esp_err_to_name(err));
-                printf("Restarting...\n");
-                fflush(stdout);
-                esp_restart();
-            }
-        }
-        vTaskDelay(200 / portTICK_PERIOD_MS);
-    }
+	TaskHandle_t incHandle;
+	xTaskCreate(&inc_task, "increment", 2048, NULL, 1, &incHandle);
 }
