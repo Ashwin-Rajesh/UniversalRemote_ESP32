@@ -37,7 +37,7 @@ void setup_uart(void);
 
 void wifi_scan(uint16_t *num, wifi_ap_record_t *records);
 
-void wifi_connect(wifi_ap_record_t record, uint8_t *password_string);
+void wifi_connect(void);
 
 esp_netif_t* netif_obj;
 
@@ -67,11 +67,7 @@ void app_main(void)
     	ESP_LOGI(TAG, " %d : %s\n", (i+1), accesspoints[i].ssid);
     }
 
-    int idx = -1;
-
-    char* input = (char*)malloc(100);
-
-    wifi_connect(accesspoints[idx-1], (uint8_t*)input);
+    wifi_connect();
 
     while(true)
     {
@@ -181,7 +177,7 @@ void wifi_scan(uint16_t *num, wifi_ap_record_t *records)
 	esp_wifi_scan_get_ap_records(num, records);
 }
 
-void wifi_connect(wifi_ap_record_t record, uint8_t *password_string)
+void wifi_connect(void)
 {
     wifi_config_t wifi_struct = {
     		.sta = {
