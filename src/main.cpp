@@ -1,11 +1,19 @@
-/* MDNS-SD Query and advertise Example
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
+/* 
+* Copyright (c) 2020 Ashwin Rajesh.
+* 
+* This program is free software: you can redistribute it and/or modify  
+* it under the terms of the GNU General Public License as published by  
+* the Free Software Foundation, version 3.
+*
+* This program is distributed in the hope that it will be useful, but 
+* WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+* General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License 
+* along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+
 #include <Arduino.h>
 #include "WiFi.h"
 #include "ESPmDNS.h"
