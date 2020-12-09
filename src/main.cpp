@@ -29,6 +29,8 @@
 #define IR_RECV_PIN 15
 #define IR_SEND_PIN 14
 
+#define LED_BLINK_PER   100/portTICK_PERIOD_MS
+
 // NVS namespace, ssid and password keys
 #define NVS_NAMESPACE           "wifiConfig"
 #define NVS_SSID_KEY            "ssid"
@@ -68,6 +70,10 @@ nvs_handle nvs_wifi;
 IRrecv receiver(IR_RECV_PIN, kCaptureBufferSize, kTimeout, true);
 IRsend sender(IR_SEND_PIN, false, true);
 IRac ac_sender(IR_SEND_PIN, false, true);
+
+TaskHandle_t config_reset_handle;
+TaskHandle_t blink_led_handle;
+TaskHandle_t blink_led_once_handle;
 
 // Listens to the IR receiver pin, gets raw data and puts it into the passed string. 
 // Returns ESP_FAIL if no signal is received.
@@ -214,6 +220,8 @@ esp_err_t http_post_handler(httpd_req_t *req)
     
     ESP_LOGI(TAG, "Got a post request to / :%s", content);
 
+    vTaskResume(blink_led_once_handle);
+    
     esp_err_t str_ret = sendRaw(content);
     
     char resp[100];
@@ -467,6 +475,9 @@ esp_err_t configWiFi(const char* str)
     ESP_LOGI(TAG, "%s|%s|%s", hostname.c_str(), ssid.c_str(), password.c_str());
 
     long now = millis();
+
+    vTaskResume(blink_led_handle);
+    
     while(WiFi.status() != WL_CONNECTED && (millis() - now < WIFI_TIMEOUT*1000))
     {   
         if(WiFi.status() == WL_NO_SSID_AVAIL)
@@ -474,12 +485,10 @@ esp_err_t configWiFi(const char* str)
             ESP_LOGI(TAG, "Connection failed");
             return ESP_FAIL;
         }
-
-        digitalWrite(GPIO_LED, HIGH);
-        delay(100);
-        digitalWrite(GPIO_LED, LOW);
-        delay(100);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
+
+    vTaskSuspend(blink_led_handle);
 
     if(WiFi.status() == WL_CONNECTED)
     {
@@ -619,11 +628,49 @@ void stop_webserver(httpd_handle_t* server)
 
 httpd_handle_t server;
 
+void config_reset_task(void* param)
+{
+    for(;;)
+    {
+        if(!digitalRead(GPIO_BUTTON))
+        {
+            ESP_LOGI(TAG, "Erasing nvs");
+            nvs_flash_erase();
+            esp_restart();
+        }
+        vTaskDelay(2000);  
+    }
+}
+
+void blink_led_task(void* param)
+{
+    for(;;)
+    {
+        digitalWrite(GPIO_LED, HIGH);
+        vTaskDelay(LED_BLINK_PER);
+        digitalWrite(GPIO_LED, LOW);
+        vTaskDelay(LED_BLINK_PER);
+    }
+}
+
+void blink_led_once_task(void* param)
+{
+    for(;;)
+    {
+        digitalWrite(GPIO_LED, HIGH);
+        vTaskDelay(LED_BLINK_PER*10);
+        digitalWrite(GPIO_LED, LOW);
+        vTaskSuspend(NULL);
+    }
+}
+
 void setup(){
 
     pinMode(GPIO_LED, OUTPUT);
     pinMode(GPIO_BUTTON, INPUT);
     pinMode(IR_SEND_PIN, OUTPUT);
+    xTaskCreate(blink_led_task, "blink led", 1024, NULL, 5, &blink_led_handle);
+    xTaskCreate(blink_led_once_task, "blink led once", 1024, NULL, 5, &blink_led_once_handle);
 
     Serial.begin(115200);
     
@@ -631,6 +678,8 @@ void setup(){
     nvs_flash_init();
 
     nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_wifi);
+    
+    xTaskCreate(config_reset_task, "config reset", 1024, NULL, 5, &config_reset_handle);
 
     char* ssid;
     size_t ssid_len;
@@ -690,14 +739,15 @@ void setup(){
 
     WiFi.begin(ssid, password);
 
+    
     while(WiFi.status() != WL_CONNECTED)
     {
-        digitalWrite(GPIO_LED, HIGH);
-        delay(100);
-        digitalWrite(GPIO_LED, LOW);
-        delay(100);
+        vTaskDelay(1000);
     }
     
+    vTaskSuspend(blink_led_handle);
+    digitalWrite(GPIO_LED, LOW);
+
     Serial.println("WiFi Setup done. Setting up server");
     
     server = start_ir_webserver();
@@ -718,11 +768,11 @@ void setup(){
 }
 
 void loop(){
-    if(!digitalRead(GPIO_BUTTON))
-    {
-        ESP_LOGI(TAG, "Erasing nvs");
-        nvs_flash_erase();
-        esp_restart();
-    }
-    delay(2000);
+    // if(!digitalRead(GPIO_BUTTON))
+    // {
+    //     ESP_LOGI(TAG, "Erasing nvs");
+    //     nvs_flash_erase();
+    //     esp_restart();
+    // }
+    // delay(2000);
 }
