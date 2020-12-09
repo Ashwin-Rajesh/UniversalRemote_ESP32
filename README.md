@@ -39,14 +39,14 @@ For example,
 
 ```10:8954,4180,540,1584,514,534,512,536,514,536```
 
-#### 3. Get "/scan"
+#### 3. GET "/scan"
 This returns the wifi networks that the ESP32 can see, after executing a scan. The SSIDs of the networks are returned, seperated by '$'.
 
 Example:
 
 ```my Wifi$neighbours Wifi$test Wifi$```
 
-#### 4. Post "/ac"
+#### 4. POST "/ac"
 Air conditioners have an exception because the IR signals they send encode information like temperature and swing. This means that the signal will not be the same for every time we press a button, and so, we need a different approach than storing the signal corresponding to each button and then sending it back. For this, we have created a seperate API for air conditioners. The information passed to this will be of the format
 
 ```protocol, model, power, mode, degrees, celsius, fan, swingv, swingh, quiet, turbo, econo, light, filter, clean, beep, sleep, clock```
