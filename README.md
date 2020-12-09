@@ -1,14 +1,26 @@
 # UniversalRemote_ESP32
-An IOT universal remote controller using the ESP32 microcontroller (ESP32-WROOM32 module), with firmware developed using ESP-IDF (Espressif IOT Development Framework) based on FreeRTOS.
+An IOT universal remote controller using the ESP32 microcontroller (ESP32-WROOM32 module), with firmware developed using the Arduino framework.
 
-## Abstract
+---
 
 ## Hardware used
 1. ESP32S NodeMCU development board
+2. TSOP1838 IR receiver
+3. Breadboard
+4. BC547 transistor
+5. IR LED x 3
+
+---
 
 ## Tools / Software frameworks used
-1. ESP-IDF (ESP IOT Development Framework)
-2. Eclipse IDE
+1. [Arduino framework for ESP32](https://github.com/espressif/arduino-esp32)
+2. [Platformio for VS Code](https://marketplace.visualstudio.com/items?itemName=platformio.platformio-ide)
 
-## References
-1. ESP-IDF documentation : https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#get-started-get-esp-idf
+---
+
+## Abstract
+The purpose of this device is to act as a bridge between the digital world and IR controlled devices. The device can connect to a WiFi network and hosts an HTTP server. Here are the URI that can be used to communicate with the server:
+
+### 1. GET "/"
+This reteurns raw timing data of an IR signal that is captured by its on-board TSOP1838 sensor. The timing data has the format :
+```
