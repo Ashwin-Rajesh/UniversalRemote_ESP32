@@ -23,4 +23,6 @@ The purpose of this device is to act as a bridge between the digital world and I
 
 ### 1. GET "/"
 This reteurns raw timing data of an IR signal that is captured by its on-board TSOP1838 sensor. The timing data has the format :
-```
+```<number of raw timing entries>:<timing data seperated by comma>```
+For example,
+```10:8954,4180,540,1584,514,534,512,536,514,536```
