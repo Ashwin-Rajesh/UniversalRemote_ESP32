@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"name": "ESP32",
+			"path": ".."
+		},
+		{
+			"name": "UniversalRemote",
+			"path": "../../../../Documents/PlatformIO/Projects/UniversalRemote"
+		}
+	],
+	"settings": {}
+}
