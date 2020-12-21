@@ -26,16 +26,22 @@ private:
     int pin;
 
 public:
-    LedHandler(int pin);
+    // @param pin_num   The number of pin connected to LED
+    LedHandler(int pin_num);
 
+    // Start continuously blinking LED
     void start_blinking();
 
+    // Stop continuously blinking LED
     void stop_blinking();
 
+    // Blink LED once
     void blink_once();
 
+    // Turn LED on
     void on();
 
+    // Turn LED off
     void off();
 };
 
@@ -46,10 +52,13 @@ private:
     TaskHandle_t buttonListenTask_h;
 
 public:
-    ResetHandler(int pint);
+    // @param pin_num   Number of pin connected to button
+    ResetHandler(int pin_num);
 
+    // Start the task
     void start();
 
+    // Stop the task
     void stop();
 };
 
