@@ -1,7 +1,10 @@
 #include "IRHandlers.h"
 
 ReceiveHandler::ReceiveHandler(int pin_num) : receiver(pin_num, kCaptureBufferSize, kTimeout, true)
-{}
+{
+    receiver.setUnknownThreshold(kMinUnknownSize);
+    receiver.setTolerance(kTolerancePercentage);
+}
 
 // Listens to the IR receiver pin, gets raw data and puts it into the passed string. 
 // Returns ESP_FAIL if no signal is received.
@@ -66,6 +69,7 @@ esp_err_t ReceiveHandler::get_raw(String &str)
 SendHandler::SendHandler(int pin_num) : ac_sender(pin_num, false, true), sender(pin_num, false, true)
 {
     pinMode(pin_num, OUTPUT);
+    sender.begin();
 }
 
 // Parses the passed string and sends AC message
