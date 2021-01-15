@@ -27,7 +27,7 @@ private:
 
 public:
     // @param pin_num   The number of pin connected to LED
-    LedHandler(int pin_num);
+    LedHandler(int pin_num, const char* blink_task_name, const char* blink_once_task_name);
 
     // Start continuously blinking LED
     void start_blinking();

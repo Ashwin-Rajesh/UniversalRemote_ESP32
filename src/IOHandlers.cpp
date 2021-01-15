@@ -1,16 +1,18 @@
 #include "Arduino.h"
 
-#include "GPIOtasks.h"
+#include "IOHandlers.h"
 
 #include "nvs_flash.h"
+#include "esp32-hal-gpio.h"
 
 #define TAG "gpio"
 
 // Keeps blinking LED with period SHORT_BLINK_TICKS
 void blink_led_task(void* param)
 {
-    static int pin = (int)param;
-    pinMode(pin, OUTPUT);
+    int pin = *((int*)param);
+    ESP_LOGI("t", "blink %d", pin);
+    vTaskSuspend(NULL);
 
     for(;;)
     {
@@ -24,14 +26,14 @@ void blink_led_task(void* param)
 // Blinks LED once for period LONG_BLINK_TICKS and then turns off
 void blink_led_once_task(void* param)
 {
-    static int pin = (int)param;
-    pinMode(pin, OUTPUT);
-
+    uint8_t pin = *((int*)param);
+    
     for(;;)
     {
         digitalWrite(pin, HIGH);
         vTaskDelay(LONG_BLINK_TICKS);
         digitalWrite(pin, LOW);
+        gpio_set_level((gpio_num_t)pin, 0);
         vTaskSuspend(NULL);
     }
 }
@@ -60,13 +62,15 @@ void button_read_task(void* param)
 
 // Constructor for LedHandler
 // @param : pin - Number of pin connected to LED
-LedHandler::LedHandler(int pin_num)
+LedHandler::LedHandler(int pin_num, const char* blink_task_name, const char* blink_once_task_name)
 {
     pin = pin_num;
+    pinMode(pin, OUTPUT);
 
-    xTaskCreate(blink_led_task, "blink led", 1024, (void*)pin, 5, &blinkTask_h);
-    vTaskSuspend(blinkTask_h);
-    xTaskCreate(blink_led_once_task, "blink led once", 1024, (void*)pin, 5, &blinkOnceTask_h);
+    ESP_LOGI("t", "Set up led blinking for pin %d", pin);
+    
+    xTaskCreate(blink_led_task, blink_task_name, 1024, (void*)&pin, 5, &blinkTask_h);
+    xTaskCreate(blink_led_once_task, blink_once_task_name, 1024, (void*)&pin, 5, &blinkOnceTask_h);
 }
 
 // Starts blinking
@@ -80,10 +84,10 @@ void LedHandler::start_blinking()
 // Stop blinking
 void LedHandler::stop_blinking()
 {
+    vTaskSuspend(blinkTask_h);
+    
     ESP_LOGI("test", "STOP %d", pin);
     
-    vTaskSuspend(blinkTask_h);
-
     digitalWrite(pin, LOW);
 }
 
@@ -114,7 +118,7 @@ void LedHandler::off()
 // @param : pin - Number of pin connected to the button
 ResetHandler::ResetHandler(int pin_num)
 {
-    pinMode(0, INPUT);
+    pinMode(pin_num, INPUT);
 
     ESP_LOGI("test", "BUTTON %d", pin_num);
 
