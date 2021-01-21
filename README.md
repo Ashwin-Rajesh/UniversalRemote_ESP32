@@ -1,5 +1,5 @@
 # UniversalRemote_ESP32
-An IOT universal remote controller using the ESP32 microcontroller (ESP32-WROOM32 module), with firmware developed using the Arduino framework.
+An IOT universal remote controller using the ESP32 microcontroller (ESP32-WROOM32 module), with firmware developed using the Arduino framework. The companion android application : [Universal remote android application](https://github.com/harithmanoj/Universal-IR-Remote-Android/tree/main)
 
 ---
 
