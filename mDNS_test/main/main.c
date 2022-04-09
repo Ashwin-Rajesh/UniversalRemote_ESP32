@@ -24,8 +24,10 @@
 #define EXAMPLE_MDNS_INSTANCE CONFIG_MDNS_INSTANCE
 #define EXAMPLE_BUTTON_GPIO     0
 
-#define WIFI_SSID "FTTH"
+#define WIFI_SSID "OPTERNA-7D26"
 #define WIFI_PASSWORD "12345678"
+
+#define MDNS_SERVICE_NAME "UniversalRemoteTest"
 
 static const char *TAG = "mdns-test";
 static char* generate_hostname(void);
@@ -144,7 +146,7 @@ static void initialise_mdns(void)
     };
 
     //initialize service
-    ESP_ERROR_CHECK( mdns_service_add("ESP32-WebServer", "_http", "_tcp", 80, serviceTxtData, 3) );
+    ESP_ERROR_CHECK( mdns_service_add(MDNS_SERVICE_NAME, "_http", "_tcp", 80, serviceTxtData, 3) );
     //add another TXT item
     ESP_ERROR_CHECK( mdns_service_txt_item_set("_http", "_tcp", "path", "/foobar") );
     //change TXT item value

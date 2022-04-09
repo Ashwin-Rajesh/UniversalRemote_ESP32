@@ -24,7 +24,7 @@
 
 #define TAG "wifi_connect"
 
-#define WIFI_SSID "FTTH"
+#define WIFI_SSID "OPTERNA_7D26"
 #define WIFI_PASSWORD "12345678"
 
 static void wifi_event_handler(void* event_handler, esp_event_base_t event, int32_t event_id, void* event_data);
@@ -186,7 +186,6 @@ void wifi_connect(void)
 		            .bssid_set = false
     		}
     };
-
 
     ESP_LOGI(TAG, " Trying to connect. SSID : %s, Password : %s", wifi_struct.sta.ssid, wifi_struct.sta.password);
 
